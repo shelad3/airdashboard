@@ -7,10 +7,12 @@ from textual.containers import Horizontal, ScrollableContainer
 from textual.widgets import Static, Button, Input, DataTable, RichLog
 
 from core.bt import (
-    bt_status, scan_all, lescan,
+    bt_status, scan_all, lescan, ensure_bt_up,
     device_info, l2ping, bt_audit,
     bt_encryption_test, bt_disconnect_target, bt_block_device, bt_unblock_device,
     bt_name_flood, bt_inquiry_flood, bt_l2cap_flood,
+    bt_paired_devices, bt_connected_devices, bt_remove_device,
+    btmon_monitor, hcidump_capture, bt_connection_flood, bt_spoof_pairing,
 )
 
 
@@ -25,6 +27,16 @@ class BluetoothTab(ScrollableContainer):
             id="bt-workflow",
         )
         yield Static("", id="bt-status")
+
+        # Paired / Connected devices
+        yield Static("[bold]Paired & Connected Devices[/]", classes="section-title")
+        yield Horizontal(
+            Button("Show Paired Devices", id="bt-show-paired", variant="primary"),
+            Button("Show Connected Only", id="bt-show-connected", variant="success"),
+            Button("Remove (Unpair) Selected", id="bt-remove", variant="error", disabled=True),
+            id="bt-paired-row",
+        )
+        yield DataTable(id="bt-paired-results")
 
         # Step 1: Scan
         yield Horizontal(
@@ -70,12 +82,41 @@ class BluetoothTab(ScrollableContainer):
 
         yield RichLog(id="bt-log", highlight=True, max_lines=500)
 
+        # ─── Connection Monitor ─────────────────────────
+        yield Static("[bold]Connection Monitor[/]", classes="section-title")
+        yield Static(
+            "[dim]See devices connecting to other phones/speakers in real-time via btmon/hcidump[/]",
+            id="bt-monitor-hint",
+        )
+        yield Horizontal(
+            Button("Start Monitor (15s)", id="bt-monitor", variant="warning"),
+            Button("Capture Packets (10s)", id="bt-hcidump", variant="warning"),
+            Input(id="bt-monitor-duration", placeholder="seconds", value="15"),
+            id="bt-monitor-row",
+        )
+
+        # ─── Disruption ─────────────────────────────────
+        yield Static("[bold]Connection Disruption[/]", classes="section-title")
+        yield Static(
+            "[yellow]⚠ Flooding a target can disrupt its active connection to another device[/]",
+            id="bt-disrupt-hint",
+        )
+        yield Horizontal(
+            Button("Connection Flood", id="bt-conn-flood", variant="error", disabled=True),
+            Button("Spoof Pairing", id="bt-spoof", variant="error", disabled=True),
+            Input(id="bt-disrupt-count", placeholder="rounds (20)", value="20"),
+            id="bt-disrupt-row",
+        )
+
     def on_mount(self):
         self.refresh_bt_status()
         self.set_interval(15, self.refresh_bt_status)
         table = self.query_one("#bt-results", DataTable)
         table.add_columns("#", "Vendor", "MAC", "Name", "Type")
         table.cursor_type = "row"
+        paired_table = self.query_one("#bt-paired-results", DataTable)
+        paired_table.add_columns("#", "Status", "MAC", "Name", "Vendor", "RSSI")
+        paired_table.cursor_type = "row"
 
     def refresh_bt_status(self):
         s = bt_status()
@@ -92,19 +133,28 @@ class BluetoothTab(ScrollableContainer):
     def _enable_action_buttons(self):
         for btn_id in ("bt-info", "bt-ping", "bt-audit", "bt-encrypt",
                        "bt-disconnect", "bt-block", "bt-unblock",
-                       "bt-flood-name", "bt-flood-l2cap"):
+                       "bt-flood-name", "bt-flood-l2cap",
+                       "bt-conn-flood", "bt-spoof"):
             try:
                 self.query_one(f"#{btn_id}", Button).disabled = False
             except Exception:
                 pass
 
     def onDataTableRowSelected(self, event: DataTable.RowSelected):
-        table = self.query_one("#bt-results", DataTable)
+        table = event.control
         try:
             row = table.get_row_at(event.cursor_row)
         except Exception:
             return
-        if len(row) >= 4:
+        if table.id == "bt-paired-results" and len(row) >= 4:
+            mac = str(row[2]).strip()
+            name = str(row[3]).strip()
+            self.query_one("#bt-target", Input).value = mac
+            self._enable_action_buttons()
+            self.query_one("#bt-remove", Button).disabled = False
+            log = self.query_one("#bt-log", RichLog)
+            log.write(f"[green]Selected:[/] {name or 'Unknown'}  MAC: {mac}  → All actions enabled")
+        elif table.id == "bt-results" and len(row) >= 4:
             mac = str(row[2]).strip()
             name = str(row[3]).strip()
             self.query_one("#bt-target", Input).value = mac
@@ -121,13 +171,71 @@ class BluetoothTab(ScrollableContainer):
             log.write("[red]Stopped[/]")
             return
 
+        if bid == "bt-show-paired":
+            log.write("[cyan]Loading paired devices...[/]")
+            paired_table = self.query_one("#bt-paired-results", DataTable)
+            paired_table.clear()
+
+            def do_paired():
+                devices = bt_paired_devices()
+                for i, d in enumerate(devices, 1):
+                    self.call_from_thread(
+                        paired_table.add_row, str(i), d["status"],
+                        d["mac"], d["name"], d["vendor"], "",
+                    )
+                self.call_from_thread(
+                    log.write,
+                    f"[green]{len(devices)} paired devices found.[/]" if devices
+                    else "[yellow]No paired devices.[/]"
+                )
+            threading.Thread(target=do_paired, daemon=True).start()
+
+        elif bid == "bt-show-connected":
+            log.write("[cyan]Checking connected devices...[/]")
+            paired_table = self.query_one("#bt-paired-results", DataTable)
+            paired_table.clear()
+
+            def do_connected():
+                devices = bt_connected_devices()
+                connected = [d for d in devices if d.get("status") == "connected"]
+                for i, d in enumerate(devices, 1):
+                    status_color = "green" if d.get("status") == "connected" else "dim"
+                    self.call_from_thread(
+                        paired_table.add_row, str(i),
+                        f"[{status_color}]{d['status']}[/{status_color}]",
+                        d["mac"], d["name"], d["vendor"],
+                        d.get("rssi", ""),
+                    )
+                self.call_from_thread(
+                    log.write,
+                    f"[green]{len(connected)} connected, {len(devices)} total paired.[/]" if devices
+                    else "[yellow]No paired devices.[/]"
+                )
+            threading.Thread(target=do_connected, daemon=True).start()
+
+        elif bid == "bt-remove":
+            mac = self.query_one("#bt-target", Input).value.strip()
+            if not mac:
+                log.write("[red]Select a device from the table first[/]")
+                return
+            log.write(f"[red]Removing (unpairing) {mac}...[/]")
+            threading.Thread(
+                target=lambda: (
+                    bt_remove_device(mac),
+                    self.call_from_thread(log.write, f"[green]Device {mac} removed[/]"),
+                    self.call_from_thread(self._refresh_paired),
+                ),
+                daemon=True,
+            ).start()
+
         if bid == "bt-scan-all":
-            log.write("[cyan]Scanning for all BT/BLE devices (12s)...[/]")
+            log.write("[cyan]Powering on adapter + scanning for all BT/BLE devices (12s)...[/]")
             table.clear()
             self.query_one("#bt-select-hint", Static).update("[dim]Scanning...[/]")
 
             def do_scan():
-                devices = scan_all(12)
+                devices, status = scan_all(12)
+                self.call_from_thread(log.write, f"[dim]{status}[/]")
                 for i, d in enumerate(devices, 1):
                     self.call_from_thread(
                         table.add_row, str(i), d["vendor"], d["mac"], d["name"], d["type"],
@@ -135,16 +243,17 @@ class BluetoothTab(ScrollableContainer):
                 self.call_from_thread(
                     self.query_one("#bt-select-hint", Static).update,
                     f"[green]{len(devices)} devices found.[/]  [dim]↑↓ select a row → auto-fills MAC below[/]"
-                    if devices else "[yellow]No devices found. Ensure Bluetooth is on.[/]",
+                    if devices else "[yellow]No devices found — adapter may be busy or no devices in range.[/]",
                 )
             threading.Thread(target=do_scan, daemon=True).start()
 
         elif bid == "bt-lescan":
-            log.write("[cyan]Scanning for BLE devices (10s)...[/]")
+            log.write("[cyan]Powering on adapter + scanning for BLE devices (10s)...[/]")
             table.clear()
             self.query_one("#bt-select-hint", Static).update("[dim]Scanning BLE...[/]")
 
             def do_lescan():
+                ensure_bt_up()
                 devices = lescan(10)
                 for i, d in enumerate(devices, 1):
                     self.call_from_thread(
@@ -266,3 +375,52 @@ class BluetoothTab(ScrollableContainer):
                 target=lambda: bt_inquiry_flood(duration, lambda line: self.call_from_thread(log.write, line)),
                 daemon=True,
             ).start()
+
+        elif bid == "bt-monitor":
+            duration = int(self.query_one("#bt-monitor-duration", Input).value.strip() or "15")
+            log.write(f"[bold cyan]Starting BT monitor for {duration}s — watch for connections...[/]")
+            log.write("[dim]This sees: devices pairing, connecting, disconnecting in your area[/]")
+            threading.Thread(
+                target=lambda: btmon_monitor(duration, lambda line: self.call_from_thread(log.write, line)),
+                daemon=True,
+            ).start()
+
+        elif bid == "bt-hcidump":
+            duration = int(self.query_one("#bt-monitor-duration", Input).value.strip() or "10")
+            log.write(f"[bold cyan]Capturing BT packets for {duration}s...[/]")
+            threading.Thread(
+                target=lambda: hcidump_capture(duration, callback=lambda line: self.call_from_thread(log.write, line)),
+                daemon=True,
+            ).start()
+
+        elif bid == "bt-conn-flood":
+            mac = self.query_one("#bt-target", Input).value.strip()
+            if not mac:
+                log.write("[red]Select a target device first[/]")
+                return
+            count = int(self.query_one("#bt-disrupt-count", Input).value.strip() or "20")
+            log.write(f"[bold red]Connection disruption on {mac} ({count} rounds)...[/]")
+            log.write("[dim]This will flood the target with connection requests[/]")
+            threading.Thread(
+                target=lambda: bt_connection_flood(mac, count, lambda line: self.call_from_thread(log.write, line)),
+                daemon=True,
+            ).start()
+
+        elif bid == "bt-spoof":
+            mac = self.query_one("#bt-target", Input).value.strip()
+            if not mac:
+                log.write("[red]Select a target device first[/]")
+                return
+            log.write(f"[bold red]Sending spoofed pairing to {mac}...[/]")
+            threading.Thread(
+                target=lambda: bt_spoof_pairing(mac, lambda line: self.call_from_thread(log.write, line)),
+                daemon=True,
+            ).start()
+
+    def _refresh_paired(self):
+        """Refresh the paired devices table."""
+        paired_table = self.query_one("#bt-paired-results", DataTable)
+        paired_table.clear()
+        devices = bt_paired_devices()
+        for i, d in enumerate(devices, 1):
+            paired_table.add_row(str(i), d["status"], d["mac"], d["name"], d["vendor"], "")

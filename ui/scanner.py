@@ -8,7 +8,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, ScrollableContainer
 from textual.widgets import Static, Button, DataTable, RichLog, Input
 
-from core.scanner import ScanRunner, save_scan, get_previous_scan, diff_hosts, get_db
+from core.scanner import ScanRunner, save_scan, get_previous_scan, diff_hosts, get_db, detect_subnet, detect_local_ip
 from core.run import run as _run
 from core.tools import lookup_mac
 
@@ -17,7 +17,13 @@ class ScannerTab(ScrollableContainer):
     """Interactive scanner: scan → select host → deep scan → ports/services."""
 
     def compose(self) -> ComposeResult:
+        self._subnet = detect_subnet()
+        self._local_ip = detect_local_ip()
         yield Static("[bold]Network Scanner[/]", classes="section-title")
+        yield Static(
+            f"  [dim]Detected:[/] Local IP: [cyan]{self._local_ip}[/]  Subnet: [cyan]{self._subnet}[/]",
+            id="scan-status",
+        )
         yield Static(
             "  [dim]Step 1:[/] Discover Hosts   →   "
             "[dim]Step 2:[/] Select Host   →   "
@@ -33,7 +39,6 @@ class ScannerTab(ScrollableContainer):
             Button("Stop", id="scan-stop", variant="error"),
             id="scan-buttons",
         )
-        yield Static("", id="scan-status")
         yield DataTable(id="scan-results")
         yield Static(
             "[dim]↑↓ select a host → deep scan it[/]",
@@ -113,10 +118,10 @@ class ScannerTab(ScrollableContainer):
             return
 
         scans = {
-            "scan-nmap-ping": ("ping-sweep", "192.168.1.0/24", ["nmap", "-sn", "192.168.1.0/24"]),
-            "scan-nmap-tcp": ("tcp-top", "192.168.1.0/24", ["nmap", "-T4", "-F", "192.168.1.0/24"]),
-            "scan-nmap-stealth": ("stealth", "192.168.1.0/24", ["nmap", "-sS", "-T4", "-F", "192.168.1.0/24"]),
-            "scan-masscan": ("masscan", "192.168.1.0/24", ["masscan", "192.168.1.0/24", "-p80,443,22,21,25,8080,8443", "--rate=1000"]),
+            "scan-nmap-ping": ("ping-sweep", self._subnet, ["nmap", "-sn", self._subnet]),
+            "scan-nmap-tcp": ("tcp-top", self._subnet, ["nmap", "-T4", "-F", self._subnet]),
+            "scan-nmap-stealth": ("stealth", self._subnet, ["nmap", "-sS", "-T4", "-F", self._subnet]),
+            "scan-masscan": ("masscan", self._subnet, ["masscan", self._subnet, "-p80,443,22,21,25,8080,8443", "--rate=1000"]),
         }
         scan_info = scans.get(bid)
         if not scan_info:

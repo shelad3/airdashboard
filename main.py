@@ -26,7 +26,7 @@ class AirdashboardApp(App):
     .dash-card { border: solid $primary; margin: 0 0 1 0; padding: 1; height: auto; }
     #scan-buttons, #wifi-buttons, #bench-buttons, #wl-buttons, #log-buttons,
     #wifi-mon-row, #bt-buttons, #bt-action-row, #bt-sec-row, #bt-flood-row,
-    #scan-action-row, #web-scan-buttons, #web-deep-buttons, #web-target-row,
+    #bt-paired-row, #bt-monitor-row, #bt-disrupt-row, #scan-action-row, #web-scan-buttons, #web-deep-buttons, #web-target-row,
     #pw-hydra-row, #pw-hydra-files, #pw-crack-row, #pw-crack-files, #pw-cewl-row,
     #web-action-row, #docs-buttons { height: 3; padding: 0 1; margin-bottom: 1; }
     #wifi-bssid, #wifi-channel, #wifi-essid,
@@ -34,7 +34,7 @@ class AirdashboardApp(App):
     #pw-target, #pw-username, #pw-userlist, #pw-passlist,
     #pw-hashfile, #pw-crack-wordlist, #pw-cewl-url { width: 28; margin-right: 1; }
     #pw-service, #pw-hashtype { width: 22; margin-right: 1; }
-    #bt-flood-count { width: 12; margin-right: 1; }
+    #bt-flood-count, #bt-monitor-duration, #bt-disrupt-count { width: 12; margin-right: 1; }
     #et-config-row, #et-action-row, #et-cred-buttons { height: 3; padding: 0 1; margin-bottom: 1; }
     #et-essid, #et-channel, #et-gateway { width: 24; margin-right: 1; }
     #et-scan-results, #et-creds { height: 8; border: solid $secondary; margin-bottom: 1; }
@@ -42,6 +42,7 @@ class AirdashboardApp(App):
     .label { padding: 0 0 0 1; color: $text-muted; }
     Button { margin-right: 1; }
     DataTable { height: 10; border: solid $secondary; margin-bottom: 1; }
+    #bt-paired-results { height: 8; }
     RichLog { border: solid $secondary; height: 1fr; }
     #scan-log, #wifi-log, #live-log, #bt-log, #web-log, #pw-log { height: 1fr; }
     #bench-log { height: 8; }

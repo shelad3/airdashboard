@@ -13,6 +13,45 @@ from pathlib import Path
 DB_PATH = Path.home() / ".airdashboard" / "history.db"
 
 
+def detect_subnet() -> str:
+    """Auto-detect the local subnet CIDR (e.g. '192.168.1.0/24')."""
+    import socket
+    import struct
+    try:
+        out = subprocess.run(["ip", "route"], capture_output=True, text=True, timeout=5).stdout
+        for line in out.split("\n"):
+            # Lines like: "192.168.1.0/24 dev wlp2s0 proto kernel ..."
+            if "/" in line and "dev" in line:
+                cidr = line.split()[0]
+                if "." in cidr and "/" in cidr:
+                    return cidr
+    except Exception:
+        pass
+    # Fallback: get local IP and guess /24
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ".".join(ip.split(".")[:3]) + ".0/24"
+    except Exception:
+        pass
+    return "192.168.1.0/24"
+
+
+def detect_local_ip() -> str:
+    """Get the local IP address of this machine."""
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "unknown"
+
+
 def get_db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))

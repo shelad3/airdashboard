@@ -255,7 +255,22 @@ class WiFiAuditTab(ScrollableContainer):
         log = self.query_one("#wifi-log", RichLog)
         table = self.query_one("#wifi-results", DataTable)
         hint = self.query_one("#wifi-select-hint", Static)
-        run_cmd(["timeout", "8", "airodump-ng", WLAN, "--band", "bg",
+        # Ensure monitor mode first — airodump-ng won't work without it
+        mon = self.mon_iface or WLAN
+        if not is_monitor_mode(mon):
+            log.write("[yellow]Interface not in monitor mode — enabling now...[/]")
+            result = monitor_start(WLAN)
+            log.write(f"[dim]{result.strip()}[/]")
+            self.refresh_monitor_status()
+            # Re-detect monitor iface
+            mon = get_monitor_iface(WLAN)
+            if not is_monitor_mode(mon):
+                log.write("[red]Failed to enable monitor mode. Try 'Enable Monitor' manually.[/]")
+                return
+            log.write(f"[green]Monitor mode enabled on {mon}[/]")
+        log.write(f"[cyan]Scanning for APs on {mon} (8s)...[/]")
+        table.clear()
+        run_cmd(["timeout", "8", "airodump-ng", mon, "--band", "bg",
                  "--write", "/tmp/adboard", "--output-format", "csv",
                  "--background", "1"])
         aps = parse_airodump_csv("/tmp/adboard-01.csv")
@@ -267,7 +282,7 @@ class WiFiAuditTab(ScrollableContainer):
         self.call_from_thread(
             hint.update,
             f"[green]{len(aps)} APs found.[/]  [dim]↑↓ select a row → auto-fills below[/]"
-            if aps else "[yellow]No APs found. Try running as root.[/]",
+            if aps else "[yellow]No APs found — no nearby networks or permission denied.[/]",
         )
 
     def _on_capture_done(self, result):
