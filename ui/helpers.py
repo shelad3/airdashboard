@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import time as _time
 from pathlib import Path
 
 from core.run import run as run_cmd
@@ -28,8 +29,14 @@ def detect_wlan_interface() -> str:
 
 WLAN = detect_wlan_interface()
 
+_iwconfig_cache = {"data": None, "time": 0}
+_sysinfo_cache = {"data": None, "time": 0}
+
 
 def get_iwconfig():
+    now = _time.time()
+    if _iwconfig_cache["data"] is not None and (now - _iwconfig_cache["time"]) < 5:
+        return _iwconfig_cache["data"]
     out = run_cmd(["iwconfig", WLAN])
     info = {"ssid": "", "signal": "", "freq": "", "ap": "", "quality": "", "channel": ""}
     m = re.search(r'ESSID:"([^"]*)"', out)
@@ -42,16 +49,24 @@ def get_iwconfig():
     if m: info["signal"] = m.group(1)
     m = re.search(r"Link Quality=(\d+/\d+)", out)
     if m: info["quality"] = m.group(1)
+    _iwconfig_cache["data"] = info
+    _iwconfig_cache["time"] = now
     return info
 
 
 def get_sysinfo():
+    now = _time.time()
+    if _sysinfo_cache["data"] is not None and (now - _sysinfo_cache["time"]) < 10:
+        return _sysinfo_cache["data"]
     out = run_cmd(["uname", "-a"])
     kernel = out.split()[2] if out else "?"
     load = run_cmd(["cat", "/proc/loadavg"]).split()[:3] if os.path.exists("/proc/loadavg") else "?"
     mem = run_cmd(["free", "-h"]).split("\n")[1].split() if shutil.which("free") else []
     mem_str = f"{mem[2]}/{mem[1]}" if len(mem) > 2 else "?"
-    return kernel, " ".join(load), mem_str
+    result = (kernel, " ".join(load), mem_str)
+    _sysinfo_cache["data"] = result
+    _sysinfo_cache["time"] = now
+    return result
 
 
 def signal_bar(sig_str, width=15):

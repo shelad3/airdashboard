@@ -217,20 +217,33 @@ BENCHMARK_SCANS = {
 }
 
 
-def detect_tools():
+_tool_cache = None
+_tool_cache_time = 0
+
+
+def detect_tools(force=False):
+    """Detect installed tools. Caches results for 60 seconds."""
+    global _tool_cache, _tool_cache_time
+    import time as _time
+    now = _time.time()
+    if _tool_cache is not None and not force and (now - _tool_cache_time) < 60:
+        return _tool_cache
+
     results = {}
     for name, info in TOOLS.items():
         path = shutil.which(info["bin"])
         if path:
             try:
                 r = subprocess.run([info["bin"], "--version"],
-                                   capture_output=True, text=True, timeout=5)
+                                   capture_output=True, text=True, timeout=3)
                 ver = r.stdout.split("\n")[0][:60] if r.stdout else r.stderr.split("\n")[0][:60]
             except Exception:
                 ver = "detected"
             results[name] = {**info, "path": path, "version": ver, "available": True}
         else:
             results[name] = {**info, "path": None, "version": None, "available": False}
+    _tool_cache = results
+    _tool_cache_time = now
     return results
 
 

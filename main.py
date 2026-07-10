@@ -58,7 +58,7 @@ class AirdashboardApp(App):
     }
     #web-hint { margin: 0 1; color: $text-muted; padding: 0 1; }
     #docs-meta { margin: 0 1; color: $text-muted; padding: 0 1; }
-    #docs-content { height: 1fr; }
+    #docs-content { height: auto; }
     """
 
     def compose(self) -> ComposeResult:

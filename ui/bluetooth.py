@@ -47,7 +47,7 @@ class BluetoothTab(ScrollableContainer):
 
     def on_mount(self):
         self.refresh_bt_status()
-        self.set_interval(5, self.refresh_bt_status)
+        self.set_interval(15, self.refresh_bt_status)
         table = self.query_one("#bt-results", DataTable)
         table.add_columns("#", "Vendor", "MAC", "Name", "Type")
         table.cursor_type = "row"

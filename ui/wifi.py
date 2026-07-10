@@ -82,8 +82,8 @@ class WiFiAuditTab(ScrollableContainer):
         table = self.query_one("#wifi-results", DataTable)
         table.add_columns("#", "Vendor", "BSSID", "Signal", "Enc", "ESSID")
         table.cursor_type = "row"
-        self.set_interval(2, self.refresh_wifi_info)
-        self.set_interval(3, self.refresh_monitor_status)
+        self.set_interval(8, self.refresh_wifi_info)
+        self.set_interval(10, self.refresh_monitor_status)
         self.refresh_monitor_status()
         self._refresh_captures()
 
