@@ -1,4 +1,4 @@
-"""Bluetooth tab — interactive workflow: scan → select device → info/ping/audit."""
+"""Bluetooth tab — scan → audit → encryption test → disconnect/block → flood."""
 
 import threading
 
@@ -9,21 +9,24 @@ from textual.widgets import Static, Button, Input, DataTable, RichLog
 from core.bt import (
     bt_status, scan_all, lescan,
     device_info, l2ping, bt_audit,
+    bt_encryption_test, bt_disconnect_target, bt_block_device, bt_unblock_device,
+    bt_name_flood, bt_inquiry_flood, bt_l2cap_flood,
 )
 
 
 class BluetoothTab(ScrollableContainer):
-    """Interactive BT audit: scan → click device → auto-fill MAC → audit actions."""
+    """Interactive BT audit: scan → select → info/ping/audit → encryption test → flood."""
 
     def compose(self) -> ComposeResult:
-        yield Static("[bold]Bluetooth Scanner[/]", classes="section-title")
+        yield Static("[bold]Bluetooth Security Audit[/]", classes="section-title")
         yield Static(
-            "  [dim]Step 1:[/] Scan Devices   →   "
-            "[dim]Step 2:[/] Select Device   →   "
-            "[dim]Step 3:[/] Info / Ping / Audit",
+            "  [dim]Scan[/] →  [dim]Select Device[/] →  [dim]Info/Ping/Audit[/] →  "
+            "[dim]Encryption Test[/] →  [dim]Disconnect/Block[/] →  [dim]Flood[/]",
             id="bt-workflow",
         )
         yield Static("", id="bt-status")
+
+        # Step 1: Scan
         yield Horizontal(
             Button("1) Scan All Devices", id="bt-scan-all", variant="primary"),
             Button("1) BLE Scan Only", id="bt-lescan", variant="primary"),
@@ -35,6 +38,8 @@ class BluetoothTab(ScrollableContainer):
             "[dim]↑↓ select a device row → auto-fills MAC below[/]",
             id="bt-select-hint",
         )
+
+        # Step 2: Action buttons
         yield Horizontal(
             Static("Target:", classes="label"),
             Input(id="bt-target", placeholder="select from table"),
@@ -43,6 +48,26 @@ class BluetoothTab(ScrollableContainer):
             Button("2) Full Audit", id="bt-audit", variant="warning", disabled=True),
             id="bt-action-row",
         )
+
+        # Step 3: Encryption test + disconnect/block
+        yield Horizontal(
+            Button("3) Encryption Test", id="bt-encrypt", variant="warning", disabled=True),
+            Button("4) Disconnect", id="bt-disconnect", variant="warning", disabled=True),
+            Button("4) Block Device", id="bt-block", variant="error", disabled=True),
+            Button("4) Unblock", id="bt-unblock", variant="default", disabled=True),
+            id="bt-sec-row",
+        )
+
+        # Step 4: Flooding
+        yield Static("[bold]Flooding / Disruption[/]", classes="section-title")
+        yield Horizontal(
+            Input(id="bt-flood-count", placeholder="count (50)", value="50"),
+            Button("5) Name Flood", id="bt-flood-name", variant="error", disabled=True),
+            Button("5) L2CAP Flood", id="bt-flood-l2cap", variant="error", disabled=True),
+            Button("5) Inquiry Flood", id="bt-flood-inquiry", variant="error"),
+            id="bt-flood-row",
+        )
+
         yield RichLog(id="bt-log", highlight=True, max_lines=500)
 
     def on_mount(self):
@@ -64,8 +89,16 @@ class BluetoothTab(ScrollableContainer):
         else:
             st.update("[bold red]No Bluetooth adapter detected[/]")
 
+    def _enable_action_buttons(self):
+        for btn_id in ("bt-info", "bt-ping", "bt-audit", "bt-encrypt",
+                       "bt-disconnect", "bt-block", "bt-unblock",
+                       "bt-flood-name", "bt-flood-l2cap"):
+            try:
+                self.query_one(f"#{btn_id}", Button).disabled = False
+            except Exception:
+                pass
+
     def onDataTableRowSelected(self, event: DataTable.RowSelected):
-        """Auto-fill MAC when a device row is selected."""
         table = self.query_one("#bt-results", DataTable)
         try:
             row = table.get_row_at(event.cursor_row)
@@ -75,17 +108,14 @@ class BluetoothTab(ScrollableContainer):
             mac = str(row[2]).strip()
             name = str(row[3]).strip()
             self.query_one("#bt-target", Input).value = mac
-            self.query_one("#bt-info", Button).disabled = False
-            self.query_one("#bt-ping", Button).disabled = False
-            self.query_one("#bt-audit", Button).disabled = False
+            self._enable_action_buttons()
             log = self.query_one("#bt-log", RichLog)
-            log.write(f"[green]Selected:[/] {name or 'Unknown'}  MAC: {mac}  → Click Info / Ping / Audit")
+            log.write(f"[green]Selected:[/] {name or 'Unknown'}  MAC: {mac}  → All actions enabled")
 
     def on_button_pressed(self, event: Button.Pressed):
         log = self.query_one("#bt-log", RichLog)
         table = self.query_one("#bt-results", DataTable)
         bid = event.button.id
-        hint = self.query_one("#bt-select-hint", Static)
 
         if bid == "bt-stop":
             log.write("[red]Stopped[/]")
@@ -94,43 +124,37 @@ class BluetoothTab(ScrollableContainer):
         if bid == "bt-scan-all":
             log.write("[cyan]Scanning for all BT/BLE devices (12s)...[/]")
             table.clear()
-            hint.update("[dim]Scanning...[/]")
+            self.query_one("#bt-select-hint", Static).update("[dim]Scanning...[/]")
 
             def do_scan():
                 devices = scan_all(12)
-                count = 0
                 for i, d in enumerate(devices, 1):
-                    count += 1
                     self.call_from_thread(
                         table.add_row, str(i), d["vendor"], d["mac"], d["name"], d["type"],
                     )
                 self.call_from_thread(
-                    hint.update,
-                    f"[green]{count} devices found.[/]  [dim]↑↓ select a row → auto-fills MAC below[/]"
-                    if count else "[yellow]No devices found. Ensure Bluetooth is on.[/]",
+                    self.query_one("#bt-select-hint", Static).update,
+                    f"[green]{len(devices)} devices found.[/]  [dim]↑↓ select a row → auto-fills MAC below[/]"
+                    if devices else "[yellow]No devices found. Ensure Bluetooth is on.[/]",
                 )
-
             threading.Thread(target=do_scan, daemon=True).start()
 
         elif bid == "bt-lescan":
             log.write("[cyan]Scanning for BLE devices (10s)...[/]")
             table.clear()
-            hint.update("[dim]Scanning BLE...[/]")
+            self.query_one("#bt-select-hint", Static).update("[dim]Scanning BLE...[/]")
 
             def do_lescan():
                 devices = lescan(10)
-                count = 0
                 for i, d in enumerate(devices, 1):
-                    count += 1
                     self.call_from_thread(
                         table.add_row, str(i), d["vendor"], d["mac"], d["name"], d["type"],
                     )
                 self.call_from_thread(
-                    hint.update,
-                    f"[green]{count} BLE devices found.[/]  [dim]↑↓ select a row[/]"
-                    if count else "[yellow]No BLE devices found.[/]",
+                    self.query_one("#bt-select-hint", Static).update,
+                    f"[green]{len(devices)} BLE devices found.[/]  [dim]↑↓ select a row[/]"
+                    if devices else "[yellow]No BLE devices found.[/]",
                 )
-
             threading.Thread(target=do_lescan, daemon=True).start()
 
         elif bid == "bt-info":
@@ -151,7 +175,6 @@ class BluetoothTab(ScrollableContainer):
                         self.call_from_thread(log.write, f"    - {s}")
                 else:
                     self.call_from_thread(log.write, "  [yellow]No services found[/]")
-
             threading.Thread(target=do_info, daemon=True).start()
 
         elif bid == "bt-ping":
@@ -160,12 +183,7 @@ class BluetoothTab(ScrollableContainer):
                 log.write("[red]Select a device from the table first[/]")
                 return
             log.write(f"[cyan]Pinging {mac}...[/]")
-
-            def do_ping():
-                result = l2ping(mac)
-                self.call_from_thread(log.write, result)
-
-            threading.Thread(target=do_ping, daemon=True).start()
+            threading.Thread(target=lambda: log.write(l2ping(mac)), daemon=True).start()
 
         elif bid == "bt-audit":
             mac = self.query_one("#bt-target", Input).value.strip()
@@ -173,8 +191,78 @@ class BluetoothTab(ScrollableContainer):
                 log.write("[red]Select a device from the table first[/]")
                 return
             log.write(f"[bold cyan]=== Full BT Audit: {mac} ===[/]")
+            threading.Thread(
+                target=lambda: bt_audit(mac, lambda line: self.call_from_thread(log.write, line)),
+                daemon=True,
+            ).start()
 
-            def cb(line):
-                self.call_from_thread(log.write, line)
+        elif bid == "bt-encrypt":
+            mac = self.query_one("#bt-target", Input).value.strip()
+            if not mac:
+                log.write("[red]Select a device from the table first[/]")
+                return
+            log.write(f"[bold yellow]=== Encryption Test: {mac} ===[/]")
+            threading.Thread(
+                target=lambda: bt_encryption_test(mac, lambda line: self.call_from_thread(log.write, line)),
+                daemon=True,
+            ).start()
 
-            threading.Thread(target=lambda: bt_audit(mac, cb), daemon=True).start()
+        elif bid == "bt-disconnect":
+            mac = self.query_one("#bt-target", Input).value.strip()
+            if not mac:
+                log.write("[red]Select a device from the table first[/]")
+                return
+            threading.Thread(
+                target=lambda: bt_disconnect_target(mac, lambda line: self.call_from_thread(log.write, line)),
+                daemon=True,
+            ).start()
+
+        elif bid == "bt-block":
+            mac = self.query_one("#bt-target", Input).value.strip()
+            if not mac:
+                log.write("[red]Select a device from the table first[/]")
+                return
+            threading.Thread(
+                target=lambda: bt_block_device(mac, lambda line: self.call_from_thread(log.write, line)),
+                daemon=True,
+            ).start()
+
+        elif bid == "bt-unblock":
+            mac = self.query_one("#bt-target", Input).value.strip()
+            if not mac:
+                log.write("[red]Select a device from the table first[/]")
+                return
+            log.write(f"[cyan]Unblocking {mac}...[/]")
+            threading.Thread(
+                target=lambda: (bt_unblock_device(mac), log.write(f"[green]Unblocked {mac}[/]")),
+                daemon=True,
+            ).start()
+
+        elif bid == "bt-flood-name":
+            mac = self.query_one("#bt-target", Input).value.strip()
+            if not mac:
+                log.write("[red]Select a device from the table first[/]")
+                return
+            count = int(self.query_one("#bt-flood-count", Input).value.strip() or "50")
+            threading.Thread(
+                target=lambda: bt_name_flood(mac, count, lambda line: self.call_from_thread(log.write, line)),
+                daemon=True,
+            ).start()
+
+        elif bid == "bt-flood-l2cap":
+            mac = self.query_one("#bt-target", Input).value.strip()
+            if not mac:
+                log.write("[red]Select a device from the table first[/]")
+                return
+            count = int(self.query_one("#bt-flood-count", Input).value.strip() or "50")
+            threading.Thread(
+                target=lambda: bt_l2cap_flood(mac, count, lambda line: self.call_from_thread(log.write, line)),
+                daemon=True,
+            ).start()
+
+        elif bid == "bt-flood-inquiry":
+            duration = int(self.query_one("#bt-flood-count", Input).value.strip() or "15")
+            threading.Thread(
+                target=lambda: bt_inquiry_flood(duration, lambda line: self.call_from_thread(log.write, line)),
+                daemon=True,
+            ).start()

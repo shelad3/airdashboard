@@ -199,6 +199,43 @@ TOOLS = {
         "description": "Linux privilege escalation checker",
         "heavyness": "light", "best_for": "Check for kernel exploits, SUID, cron misconfigs",
     },
+    # Evil Twin / Fake AP
+    "hostapd": {
+        "bin": "hostapd", "category": "wifi",
+        "description": "IEEE 802.11 AP / authenticator daemon",
+        "heavyness": "light", "best_for": "Evil twin fake AP, rogue access point creation",
+    },
+    "dnsmasq": {
+        "bin": "dnsmasq", "category": "mitm",
+        "description": "Lightweight DHCP/DNS forwarder",
+        "heavyness": "light", "best_for": "Captive portal DNS redirect, DHCP for fake AP",
+    },
+    # Bluetooth tools
+    "hcitool": {
+        "bin": "hcitool", "category": "scanner",
+        "description": "Bluetooth device discovery and configuration",
+        "heavyness": "light", "best_for": "BT/BLE scanning, name requests, connection setup",
+    },
+    "sdptool": {
+        "bin": "sdptool", "category": "enum",
+        "description": "Bluetooth SDP service discovery tool",
+        "heavyness": "light", "best_for": "Discover BT services, enumerate RFCOMM channels",
+    },
+    "bluetoothctl": {
+        "bin": "bluetoothctl", "category": "scanner",
+        "description": "Bluetooth management tool (BlueZ)",
+        "heavyness": "light", "best_for": "BT device pairing, scanning, blocking, disconnecting",
+    },
+    "l2ping": {
+        "bin": "l2ping", "category": "scanner",
+        "description": "L2CAP Bluetooth ping utility",
+        "heavyness": "light", "best_for": "Test BT device reachability, signal strength",
+    },
+    "rfcomm": {
+        "bin": "rfcomm", "category": "enum",
+        "description": "Bluetooth serial port emulation",
+        "heavyness": "light", "best_for": "BT serial connection, PIN testing, encryption check",
+    },
 }
 
 BENCHMARK_SCANS = {

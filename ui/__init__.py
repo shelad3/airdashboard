@@ -10,9 +10,10 @@ from ui.wordlist import WordlistTab
 from ui.benchmark import BenchmarkTab
 from ui.live_log import LiveLogTab
 from ui.docs import DocsTab
+from ui.evil_twin import EvilTwinTab
 
 __all__ = [
     "DashboardTab", "ScannerTab", "WiFiAuditTab", "BluetoothTab",
     "WebReconTab", "PasswordAttacksTab", "WordlistTab",
-    "BenchmarkTab", "LiveLogTab", "DocsTab",
+    "BenchmarkTab", "LiveLogTab", "DocsTab", "EvilTwinTab",
 ]
