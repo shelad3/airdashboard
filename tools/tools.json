@@ -1,0 +1,210 @@
+{
+  "scanners": {
+    "nmap": {
+      "bin": "nmap",
+      "install": "sudo apt install -y nmap",
+      "description": "Network discovery & security scanning",
+      "url": "https://nmap.org",
+      "portable": false
+    },
+    "masscan": {
+      "bin": "masscan",
+      "install": "sudo apt install -y masscan",
+      "description": "Fast TCP port scanner (10M ports/sec)",
+      "url": "https://github.com/robertdavidgraham/masscan",
+      "portable": true
+    },
+    "rustscan": {
+      "bin": "rustscan",
+      "install": "cargo install rustscan",
+      "description": "Fast port scanner written in Rust",
+      "url": "https://github.com/RustScan/RustScan",
+      "portable": false
+    },
+    "netdiscover": {
+      "bin": "netdiscover",
+      "install": "sudo apt install -y netdiscover",
+      "description": "ARP scanner for network discovery"
+    },
+    "arp-scan": {
+      "bin": "arp-scan",
+      "install": "sudo apt install -y arp-scan",
+      "description": "ARP scan for local network enumeration"
+    },
+    "fping": {
+      "bin": "fping",
+      "install": "sudo apt install -y fping",
+      "description": "Fast parallel ping scanner"
+    }
+  },
+  "wifi": {
+    "aircrack-ng": {
+      "bin": "aircrack-ng",
+      "install": "sudo apt install -y aircrack-ng",
+      "description": "WEP/WPA key cracking suite",
+      "installed": true
+    },
+    "airodump-ng": {
+      "bin": "airodump-ng",
+      "install": "sudo apt install -y aircrack-ng",
+      "description": "WiFi packet capture & AP discovery",
+      "installed": true
+    },
+    "aireplay-ng": {
+      "bin": "aireplay-ng",
+      "install": "sudo apt install -y aircrack-ng",
+      "description": "WiFi deauth/injection attacks"
+    },
+    "reaver": {
+      "bin": "reaver",
+      "install": "sudo apt install -y reaver",
+      "description": "WPS PIN brute force attack tool"
+    },
+    "bully": {
+      "bin": "bully",
+      "install": "sudo apt install -y bully",
+      "description": "WPS brute force (alternative to reaver)"
+    },
+    "wifite": {
+      "bin": "wifite",
+      "install": "sudo apt install -y wifite",
+      "description": "Automated WiFi attack tool",
+      "installed": true
+    },
+    "kismet": {
+      "bin": "kismet",
+      "install": "sudo apt install -y kismet",
+      "description": "Wireless network detector/sniffer",
+      "url": "https://www.kismetwireless.net"
+    }
+  },
+  "bluetooth": {
+    "bluez": {
+      "bin": "bluetoothctl",
+      "install": "sudo apt install -y bluez bluez-tools",
+      "description": "Official Linux Bluetooth stack",
+      "installed": true
+    }
+  },
+  "crackers": {
+    "hashcat": {
+      "bin": "hashcat",
+      "install": "sudo apt install -y hashcat",
+      "description": "GPU-accelerated password cracking",
+      "installed": true
+    },
+    "john": {
+      "bin": "john",
+      "install": "sudo apt install -y john",
+      "description": "John the Ripper password cracker",
+      "url": "https://www.openwall.com/john/"
+    },
+    "hydra": {
+      "bin": "hydra",
+      "install": "sudo apt install -y hydra",
+      "description": "Network login brute-forcer (SSH, FTP, HTTP...)",
+      "url": "https://github.com/vanhauser-thc/thc-hydra"
+    },
+    "cewl": {
+      "bin": "cewl",
+      "install": "sudo apt install -y cewl",
+      "description": "Custom wordlist generator from websites"
+    }
+  },
+  "web": {
+    "nikto": {
+      "bin": "nikto",
+      "install": "sudo apt install -y nikto",
+      "description": "Web server vulnerability scanner (6700+ tests)"
+    },
+    "gobuster": {
+      "bin": "gobuster",
+      "install": "Download from GitHub releases",
+      "description": "Directory/DNS brute force scanner",
+      "url": "https://github.com/OJ/gobuster"
+    },
+    "whatweb": {
+      "bin": "whatweb",
+      "install": "sudo apt install -y whatweb",
+      "description": "Web technology fingerprinting"
+    },
+    "sqlmap": {
+      "bin": "sqlmap",
+      "install": "sudo apt install -y sqlmap",
+      "description": "SQL injection automation tool"
+    },
+    "wpscan": {
+      "bin": "wpscan",
+      "install": "gem install wpscan",
+      "description": "WordPress security scanner"
+    },
+    "ffuf": {
+      "bin": "ffuf",
+      "install": "Download from GitHub releases",
+      "description": "Fast web fuzzer for directory/parameter discovery",
+      "url": "https://github.com/ffuf/ffuf"
+    }
+  },
+  "network": {
+    "bettercap": {
+      "bin": "bettercap",
+      "install": "sudo apt install -y bettercap",
+      "description": "MITM framework",
+      "installed": true
+    },
+    "responder": {
+      "bin": "responder",
+      "install": "sudo apt install -y responder",
+      "description": "LLMNR/NBT-NS/MDNS poisoner"
+    },
+    "ettercap": {
+      "bin": "ettercap",
+      "install": "sudo apt install -y ettercap",
+      "description": "ARP/DNS spoofing, MITM attacks"
+    },
+    "mitmproxy": {
+      "bin": "mitmproxy",
+      "install": "sudo apt install -y mitmproxy",
+      "description": "Interactive HTTPS proxy"
+    },
+    "wireshark": {
+      "bin": "tshark",
+      "install": "sudo apt install -y wireshark",
+      "description": "Packet analyzer (CLI: tshark)",
+      "installed": true
+    },
+    "tcpdump": {
+      "bin": "tcpdump",
+      "install": "sudo apt install -y tcpdump",
+      "description": "CLI packet capture tool",
+      "installed": true
+    },
+    "dsniff": {
+      "bin": "dsniff",
+      "install": "sudo apt install -y dsniff",
+      "description": "Network auditing / credential sniffing toolkit"
+    }
+  },
+  "enumeration": {
+    "enum4linux": {
+      "bin": "enum4linux",
+      "install": "sudo apt install -y enum4linux",
+      "description": "Windows/Samba network enumeration"
+    },
+    "smbclient": {
+      "bin": "smbclient",
+      "install": "sudo apt install -y smbclient",
+      "description": "SMB/CIFS client"
+    },
+    "dnsenum": {
+      "bin": "dnsenum",
+      "install": "sudo apt install -y dnsenum",
+      "description": "DNS enumeration & subdomain brute force"
+    },
+    "theHarvester": {
+      "bin": "theHarvester",
+      "install": "pip3 install theHarvester",
+      "description": "Email/subdomain/IP/URL harvester"
+    }
+  }
+}
