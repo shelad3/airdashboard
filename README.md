@@ -4,8 +4,18 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Textual](https://img.shields.io/badge/Textual-TUI-281F33?style=flat-square&logo=markdown&logoColor=white)](https://textual.textualize.io)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Linux-black?style=flat-square&logo=linux&logoColor=white)]()
+[![GitHub stars](https://img.shields.io/github/stars/shelad3/airdashboard?style=flat-square&logo=github)](https://github.com/shelad3/airdashboard/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/shelad3/airdashboard?style=flat-square&logo=github)](https://github.com/shelad3/airdashboard/network/members)
+[![GitHub last commit](https://img.shields.io/github/last-commit/shelad3/airdashboard?style=flat-square&logo=github)](https://github.com/shelad3/airdashboard/commits)
+[![GitHub issues](https://img.shields.io/github/issues/shelad3/airdashboard?style=flat-square&logo=github)](https://github.com/shelad3/airdashboard/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/shelad3/airdashboard?style=flat-square&logo=github)](https://github.com/shelad3/airdashboard/pulls)
+[![Repo size](https://img.shields.io/github/repo-size/shelad3/airdashboard?style=flat-square&logo=github)](https://github.com/shelad3/airdashboard)
+[![Code size](https://img.shields.io/github/languages/code-size/shelad3/airdashboard?style=flat-square&logo=github)](https://github.com/shelad3/airdashboard)
+[![Tools](https://img.shields.io/badge/36-Tools-blueviolet?style=flat-square)](#integrated-tools-36)
+[![Tabs](https://img.shields.io/badge/10-Tabs-22c55e?style=flat-square)](#tabs)
+[![Categories](https://img.shields.io/badge/8-Categories-eab308?style=flat-square)](#integrated-tools-36)
 
 A button-driven terminal dashboard that integrates **36 security tools** across **8 categories** into a unified interface. Every scan leads to the next action — no dead-ends, no manual commands.
 
